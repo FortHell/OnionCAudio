@@ -12,4 +12,3 @@ A layered audio format designed for game development.
 - AVX2
 - Cross-platform
 - .ocaudio
-- 
