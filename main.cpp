@@ -1,69 +1,85 @@
-#include <iostream>
 #include <cstdint>
+#include <cstring>
 #include <fstream>
-#include <type_traits>
+#include <iostream>
 
-#pragma pack(push, 1)
-struct OCAudioHeader {
-    std::uint8_t val_id[4] = {};
-    std::uint8_t version_major = 255;
-    std::uint8_t version_minor = 255;
-    std::uint16_t volume_offset = 0;
+#include "ocaudio_format.hpp"
 
-    std::uint32_t sample_rate = 0;
-    std::uint16_t stem_count = 0;
-    std::uint8_t fadein_sec = 0;
-    std::uint8_t fadeout_sec = 0;
-    std::uint32_t block_size = 0;
+using ocaudio::Error;
+using ocaudio::Header;
 
-    std::uint32_t total_frames = 0;
-    std::uint32_t loop_start = 0;
-    std::uint32_t loop_end = 0;
-
-    std::uint64_t reserved[4] = {};
-};
-#pragma pack(pop)
-
-static_assert(sizeof(OCAudioHeader) == 64);
-static_assert(std::is_trivially_copyable_v<OCAudioHeader>);
-
-int outputFile(const OCAudioHeader& m_header) {
-    std::ofstream f("test.ocaudio", std::ios::binary);
+Error writeHeader(const char* path, const Header& header) {
+    std::ofstream f(path, std::ios::binary);
 
     if (!f.is_open()) {
-        std::cerr << "Error writing to file! (100)\n";
-        return 1;
+        std::cerr << "Error opening file for writing! (" << static_cast<int>(Error::OpenFailed) << ")\n";
+        return Error::OpenFailed;
     }
 
-    f.write(reinterpret_cast<const char*>(&m_header), sizeof(m_header));
+    f.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
     if (!f) {
-        std::cerr << "Write failed! (101)\n";
-        return 1;
+        std::cerr << "Write failed! (" << static_cast<int>(Error::WriteFailed) << ")\n";
+        return Error::WriteFailed;
     }
 
-    return 0;
+    return Error::Ok;
 }
 
-int main() {
-    OCAudioHeader header;
+Error readHeader(const char* path, Header& header) {
+    std::ifstream f(path, std::ios::binary);
 
-    header.val_id[0] = 'O';
-    header.val_id[1] = 'C';
-    header.val_id[2] = 'A';
-    header.val_id[3] = '_';
+    if (!f.is_open()) {
+        std::cerr << "Error opening file for reading! (" << static_cast<int>(Error::OpenFailed) << ")\n";
+        return Error::OpenFailed;
+    }
 
-    header.version_major = 0;
-    header.version_minor = 1;
+    f.read(reinterpret_cast<char*>(&header), sizeof(header));
 
+    if (!f) {
+        std::cerr << "Read failed! (" << static_cast<int>(Error::ReadFailed) << ")\n";
+        return Error::ReadFailed;
+    }
+
+    return Error::Ok;
+}
+
+int main(int argc, char** argv) {
+    const char* path = (argc > 1) ? argv[1] : "test.ocaudio";
+
+    Header header;
     header.sample_rate = 48000;
     header.stem_count = 4;
-    header.block_size = 128;
+    header.volume_q4_12 = ocaudio::volumeToQ4_12(1.0f);
 
     std::cout << "Size of header: " << sizeof(header) << " bytes\n";
-    static_assert(sizeof(header) == 64, "Incorrect header size! (102)");
 
-    outputFile(header);
-    
+    Error err = ocaudio::validateHeader(header);
+    if (err != Error::Ok) {
+        std::cerr << "Invalid header! (" << static_cast<int>(err) << ")\n";
+        return static_cast<int>(err);
+    }
+
+    err = writeHeader(path, header);
+    if (err != Error::Ok) return static_cast<int>(err);
+
+    // Read back and verify round trip.
+    Header readBack;
+    err = readHeader(path, readBack);
+    if (err != Error::Ok) return static_cast<int>(err);
+
+    err = ocaudio::validateHeader(readBack);
+    if (err != Error::Ok) {
+        std::cerr << "Read-back header invalid! (" << static_cast<int>(err) << ")\n";
+        return static_cast<int>(err);
+    }
+
+    if (std::memcmp(&header, &readBack, sizeof(Header)) != 0) {
+        std::cerr << "Round-trip mismatch!\n";
+        return static_cast<int>(Error::ReadFailed);
+    }
+
+    std::cout << "Wrote and verified " << path << " (volume x"
+              << ocaudio::volumeFromQ4_12(readBack.volume_q4_12) << ")\n";
     return 0;
 }
