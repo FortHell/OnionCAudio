@@ -1,8 +1,10 @@
 #include <iostream>
 #include <cstdint>
+#include <fstream>
+#include <type_traits>
 
 struct OCAudioHeader {
-    std::uint8_t val_id[4];
+    std::uint8_t val_id[4] = {};
     std::uint8_t version_major = 255;
     std::uint8_t version_minor = 255;
     std::uint16_t volume_offset = 0;
@@ -17,8 +19,29 @@ struct OCAudioHeader {
     std::uint32_t loop_start = 0;
     std::uint32_t loop_end = 0;
 
-    std::uint64_t reserved[4];
+    std::uint64_t reserved[4] = {};
 };
+
+static_assert(sizeof(OCAudioHeader) == 64);
+static_assert(std::is_trivially_copyable_v<OCAudioHeader>);
+
+int outputFile(const OCAudioHeader& m_header) {
+    std::ofstream f("test.ocaudio", std::ios::binary);
+
+    if (!f.is_open()) {
+        std::cerr << "Error writing to file! (100)\n";
+        return 1;
+    }
+
+    f.write(reinterpret_cast<const char*>(&m_header), sizeof(m_header));
+
+    if (!f) {
+        std::cerr << "Write failed! (101)\n";
+        return 1;
+    }
+
+    return 0;
+}
 
 int main() {
     OCAudioHeader header;
@@ -36,6 +59,9 @@ int main() {
     header.block_size = 128;
 
     std::cout << "Size of header: " << sizeof(header) << " bytes\n";
+    static_assert(sizeof(header) == 64, "Incorrect header size! (102)");
+
+    outputFile(header);
     
     return 0;
 }
