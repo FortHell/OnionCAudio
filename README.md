@@ -1,5 +1,6 @@
 # OnionCAudio (Onion Custom Audio)
 A layered audio format designed for game development.
+![Logo of the project](media/onioncaudio_logo.png)
 
 **Features:**
 - Perceptually lossless compression
