@@ -3,6 +3,7 @@
 #include <fstream>
 #include <type_traits>
 
+#pragma pack(push, 1)
 struct OCAudioHeader {
     std::uint8_t val_id[4] = {};
     std::uint8_t version_major = 255;
@@ -21,6 +22,7 @@ struct OCAudioHeader {
 
     std::uint64_t reserved[4] = {};
 };
+#pragma pack(pop)
 
 static_assert(sizeof(OCAudioHeader) == 64);
 static_assert(std::is_trivially_copyable_v<OCAudioHeader>);
