@@ -20,4 +20,3 @@ Makes the code easier to understand.
 
 ## Small Explanations
 - Volume: Q4.12, 4 integer bits, 12 fractional bits, between 1 and 10 - essentially just multiplying by 4096
-- 
