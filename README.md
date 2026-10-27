@@ -24,3 +24,6 @@ A layered audio format designed for game development.
 - QOA encoder / decoder
 - Seek table for loop points
 - Interleaved stream
+
+## Usage
+`./main <filename.ocaudio>`
