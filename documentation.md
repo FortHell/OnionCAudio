@@ -19,4 +19,4 @@ Makes the code easier to understand.
 - ReservedNotZero = 113
 
 ## Small Explanations
-- Volume: Q4.12, 4 integer bits, 12 fractional bits, between 1 and 10 - essentially just multiplying by 4096
+- Volume: Q4.12, 4 integer bits, 12 fractional bits, between 0 and 10 - essentially just multiplying by 4096

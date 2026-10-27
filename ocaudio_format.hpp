@@ -5,22 +5,23 @@
 #include <cstdint>
 #include <type_traits>
 
-// .ocaudio container format, v0.2
-// All header fields are little-endian. The payload is a stock (big-endian) QOA stream.
+// ocaudio_format header
 
-static_assert(std::endian::native == std::endian::little, "ocaudio header is little-endian; add byte-swapping for big-endian hosts");
+// Needs to be little-endian
+static_assert(std::endian::native == std::endian::little, "Must be little-endian. Byte-swapping for big-endian hosts.");
 
 namespace ocaudio {
 
 constexpr std::uint8_t  kVersionMajor   = 0;
 constexpr std::uint8_t  kVersionMinor   = 2;
 constexpr std::uint16_t kHeaderSize     = 64;
-constexpr std::uint16_t kMaxStemsV1     = 15;   // 15 stereo stems = 30 QOA channels (QOA max is 31)
+// 15 stereo stems = 30 individual QOA channels
+constexpr std::uint16_t kMaxStemsV1     = 15;
 constexpr std::uint8_t  kChannelsPerStem = 2;
 
-// Volume is a Q4.12 fixed-point multiplier: raw / 4096. 4096 == 1.0.
+// Q4.12 fixed-point multiplier: 4096 == 1.0
 constexpr std::uint16_t kVolumeOne = 4096;
-constexpr std::uint16_t kVolumeMax = 10 * kVolumeOne;  // 10.0
+constexpr std::uint16_t kVolumeMax = 10 * kVolumeOne;
 
 enum class Codec : std::uint8_t {
     None = 0,
@@ -61,7 +62,7 @@ struct Header {
     std::uint16_t header_size       = kHeaderSize;
 
     std::uint32_t sample_rate       = 0;
-    std::uint32_t total_frames      = 0;     // PCM frames per stem
+    std::uint32_t total_frames      = 0;
 
     std::uint16_t stem_count        = 0;
     std::uint8_t  channels_per_stem = kChannelsPerStem;
@@ -73,11 +74,11 @@ struct Header {
     std::uint16_t fadeout_ms        = 0;
     std::uint16_t volume_q4_12      = kVolumeOne;
 
-    std::uint32_t loop_start        = 0;     // PCM frames
-    std::uint32_t loop_end          = 0;     // PCM frames, exclusive
-    std::uint32_t index_offset      = 0;     // seek table, 0 = none
+    std::uint32_t loop_start        = 0;     // defined in frames
+    std::uint32_t loop_end          = 0;     // defined in frames (exclusive)
+    std::uint32_t index_offset      = 0;     // seek table, 0 == none
     std::uint32_t data_offset       = 0;     // start of QOA stream
-    std::uint32_t crc32             = 0;     // 0 = unused
+    std::uint32_t crc32             = 0;     // 0 == unused
 
     std::uint8_t  reserved[16]      = {};
 };
@@ -109,6 +110,7 @@ inline float volumeFromQ4_12(std::uint16_t raw) {
     return static_cast<float>(raw) / static_cast<float>(kVolumeOne);
 }
 
+// Error checking
 inline Error validateHeader(const Header& h) {
     if (h.magic[0] != 'O' || h.magic[1] != 'C' || h.magic[2] != 'A' || h.magic[3] != '_')
         return Error::BadMagic;
@@ -140,4 +142,4 @@ inline Error validateHeader(const Header& h) {
     return Error::Ok;
 }
 
-} // namespace ocaudio
+}
